@@ -1,0 +1,19 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: comprovante-emissor
+  jackson:
+    property-naming-strategy: SNAKE_CASE   # JSON em snake_case (contrato do módulo)
+    default-property-inclusion: non_null
+
+# ------------------------------------------------------------------------------
+# TODO (Aula 4/5) — configuração da fila de gravação (RabbitMQ).
+# ------------------------------------------------------------------------------
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
