@@ -1,0 +1,20 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: comprovantes-monolito
+  datasource:
+    url: jdbc:h2:mem:comprovantes;DB_CLOSE_DELAY=-1   # ❌ UM banco para tudo
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+notificacao:
+  gateway-fora: false   # mude para true e veja a emissão inteira falhar por causa do SMS
