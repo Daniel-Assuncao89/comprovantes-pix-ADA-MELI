@@ -1,5 +1,6 @@
 package tech.ada.pix.gravador;
 
+import tech.ada.pix.contracts.ComprovanteRequest;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
@@ -28,22 +29,26 @@ public class ComprovanteEntity {
         // exigido pelo JPA
     }
 
-    public ComprovanteEntity(UUID id, String nome, String numeroDocumento, BigDecimal valorTransacao,
-                             String chavePixDestino, LocalDateTime dataHoraTransacao) {
+    private ComprovanteEntity(UUID id, ComprovanteRequest r) {
         this.id = id;
-        this.nome = nome;
-        this.numeroDocumento = numeroDocumento;
-        this.valorTransacao = valorTransacao;
-        this.chavePixDestino = chavePixDestino;
-        this.dataHoraTransacao = dataHoraTransacao;
+        this.nome = r.nome();
+        this.numeroDocumento = r.numeroDocumento();
+        this.valorTransacao = r.valorTransacao();
+        this.chavePixDestino = r.chavePixDestino();
+        this.dataHoraTransacao = r.dataHoraTransacao();
         this.dataHoraGravacao = LocalDateTime.now();
     }
 
-    public UUID getId() {
-        return id;
+    /** Constrói a entidade a partir do comando de gravação. */
+    public static ComprovanteEntity de(UUID id, ComprovanteRequest dados) {
+        return new ComprovanteEntity(id, dados);
     }
 
-    public LocalDateTime getDataHoraGravacao() {
-        return dataHoraGravacao;
-    }
+    public UUID getId() { return id; }
+    public String getNome() { return nome; }
+    public String getNumeroDocumento() { return numeroDocumento; }
+    public BigDecimal getValorTransacao() { return valorTransacao; }
+    public String getChavePixDestino() { return chavePixDestino; }
+    public LocalDateTime getDataHoraTransacao() { return dataHoraTransacao; }
+    public LocalDateTime getDataHoraGravacao() { return dataHoraGravacao; }
 }
