@@ -1,5 +1,10 @@
 server:
   port: 8081
+  error:
+    # Mostra a mensagem da exceção na resposta de erro. Assim o 503 diz QUAL comprovante falhou
+    # ("não foi possível gravar o comprovante <id>"). O Spring Boot esconde por padrão,
+    # para não vazar detalhes internos: aqui a mensagem é nossa e é útil para o cliente.
+    include-message: always
 
 spring:
   application:

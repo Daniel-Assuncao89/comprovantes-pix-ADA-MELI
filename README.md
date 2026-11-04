@@ -78,8 +78,8 @@ curl -i -X POST localhost:8081/comprovantes -H 'Content-Type: application/json' 
 | Situação | Resposta do emissor |
 |---|---|
 | Tudo certo | `202`, e o comprovante fica `GRAVADO` |
-| Campo errado (tente `"numero_conta":"002761"`) | `400`, e ninguém chama o gravador |
-| Gravador desligado (`Ctrl+C` nele) | `503`, e o comprovante fica `INVALIDADO` (a SAGA desfez) |
+| Campo errado (tente `"numero_conta":"002761"`) | `400`, com o campo errado na `message`, e ninguém chama o gravador |
+| Gravador desligado (`Ctrl+C` nele) | `503`, com o id do comprovante na `message`, e o comprovante fica `INVALIDADO` (a SAGA desfez) |
 
 No PowerShell, o `curl` é outro comando. Use o **Git Bash** ou o Postman.
 
