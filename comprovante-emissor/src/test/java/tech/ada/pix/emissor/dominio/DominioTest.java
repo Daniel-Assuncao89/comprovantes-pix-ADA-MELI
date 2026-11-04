@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Os conceitos da Aula 1 em forma de teste: VO é igual por valor, entidade é igual por id. */
+/** Os conceitos de DDD em forma de teste: VO é igual por valor, entidade é igual por id e cuida do próprio status. */
 class DominioTest {
 
     private final ContaBancaria conta = new ContaBancaria("2022", "00276", "0");
@@ -54,5 +54,26 @@ class DominioTest {
 
         assertThat(primeiro).isNotEqualTo(segundo);
         assertThat(primeiro).isEqualTo(primeiro);
+    }
+
+    // ---- Aula 2: o ciclo de vida do comprovante na SAGA ----
+
+    @Test
+    void invalidarDuasVezesDaNoMesmoQueInvalidarUma() {
+        Comprovante comprovante = Comprovante.emitir("Giovanni", conta, valor, chave);
+
+        comprovante.invalidar("gravador fora");
+        comprovante.invalidar("outro motivo");   // a SAGA pode repetir a compensação
+
+        assertThat(comprovante.status()).isEqualTo(StatusComprovante.INVALIDADO);
+        assertThat(comprovante.motivoInvalidacao()).isEqualTo("gravador fora");
+    }
+
+    @Test
+    void comprovanteInvalidadoNaoVoltaAValer() {
+        Comprovante comprovante = Comprovante.emitir("Giovanni", conta, valor, chave);
+        comprovante.invalidar("gravador fora");
+
+        assertThatThrownBy(comprovante::confirmarGravacao).isInstanceOf(IllegalStateException.class);
     }
 }

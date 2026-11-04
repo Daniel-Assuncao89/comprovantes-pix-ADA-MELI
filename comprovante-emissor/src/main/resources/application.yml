@@ -8,8 +8,13 @@ spring:
     property-naming-strategy: SNAKE_CASE   # JSON em snake_case (contrato do módulo)
     default-property-inclusion: non_null
 
+# Aula 2 — onde está o gravador (passo remoto da SAGA) e quanto tempo esperar por ele
+gravador:
+  base-url: http://localhost:8082
+  timeout-ms: 2000
+
 # ------------------------------------------------------------------------------
-# TODO (Aula 4/5) — configuração da fila de gravação (RabbitMQ).
+# TODO (Aula 5) — a gravação deixa de ser REST e vira uma fila (RabbitMQ).
 # ------------------------------------------------------------------------------
 
 management:

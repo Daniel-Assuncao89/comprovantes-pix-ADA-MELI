@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Entrypoint do bounded context EMISSÃO.
- * Aula 1: valida e responde 202 com o id gerado.
+ *
+ * 202 → aceito e gravado · 400 → campo inválido · 503 → gravação falhou (SAGA compensada).
  */
 @RestController
 @RequestMapping("/comprovantes")

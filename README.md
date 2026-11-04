@@ -1,25 +1,27 @@
-# Comprovantes PIX — Aula 1 (DDD)
+# Comprovantes PIX — Aulas 1 (DDD) e 2 (SAGA)
 
-Exemplo da Aula 1 do projeto guiado. Uma API que **emite** e **consulta** comprovantes de PIX que já aconteceram.
+Exemplo do projeto guiado. Uma API que **emite** e **consulta** comprovantes de PIX que já aconteceram.
 
-## As duas branches
+## As branches
 
 | Branch | O que tem |
 |---|---|
-| `v0` | Só a **estrutura**: os módulos, as classes vazias e os `// TODO`. É o ponto de partida da aula. |
-| `gabarito` | Como a aula **deve terminar**: validação no emissor + o modelo de domínio com **entidade** e **Value Objects**. |
+| `as-is` | O "antes" da Aula 1: um monólito ruim de propósito, para a turma criticar. |
+| `v0` | Só a **estrutura**: os módulos, as classes vazias e os `// TODO`. É o ponto de partida da Aula 1. |
+| `gabarito` | Fim da Aula 1: validação no emissor + o modelo de domínio com **entidade** e **Value Objects**. |
+| `aula-02` | Fim da Aula 2: o emissor chama o gravador numa **SAGA** e sabe desfazer quando a gravação falha. |
 
 Para trocar de uma para a outra:
 
 ```bash
-git checkout v0
 git checkout gabarito
+git checkout aula-02
 ```
 
-Para ver tudo o que muda entre as duas:
+Para ver tudo o que muda entre duas branches:
 
 ```bash
-git diff v0 gabarito
+git diff gabarito aula-02
 ```
 
 ## Os módulos
@@ -28,8 +30,8 @@ Cada serviço é um **bounded context** e tem o seu próprio banco.
 
 | Módulo | Porta | O que faz |
 |---|---|---|
-| `comprovante-emissor` | 8081 | Recebe o `POST /comprovantes`, valida e responde `202` |
-| `comprovante-gravador` | 8082 | Salva o comprovante no banco dele |
+| `comprovante-emissor` | 8081 | Recebe o `POST /comprovantes`, valida, chama o gravador e responde `202` (ou `503` se a gravação falhou) |
+| `comprovante-gravador` | 8082 | Recebe o `POST /interno/comprovantes` e salva no banco dele, sem gravar duas vezes o mesmo id |
 | `comprovante-consulta` | 8083 | Responde o `GET /comprovantes/{id}` (por enquanto sempre `404`) |
 | `shared-contracts` | — | Classes que os serviços trocam entre si (os "envelopes" de dados) |
 
@@ -49,12 +51,20 @@ aula-01-ddd-exemplo/
 
 Precisa de **Java 21** e **Maven**.
 
+**1. Instalar uma vez** (e de novo sempre que trocar de branch). Sem isso, o `spring-boot:run` abaixo não acha o `shared-contracts`:
+
 ```bash
-mvn compile                                     # compila tudo
-mvn -pl comprovante-emissor spring-boot:run     # sobe o emissor na porta 8081
+mvn install -DskipTests
 ```
 
-Testar o emissor (em outro terminal, ou pelo Postman):
+**2. Subir os dois serviços**, cada um no seu terminal. O gravador sobe primeiro:
+
+```bash
+mvn -pl comprovante-gravador spring-boot:run    # porta 8082
+mvn -pl comprovante-emissor spring-boot:run     # porta 8081
+```
+
+**3. Mandar um comprovante** (em outro terminal, ou pelo Postman):
 
 ```bash
 curl -i -X POST localhost:8081/comprovantes -H 'Content-Type: application/json' \
@@ -65,33 +75,67 @@ curl -i -X POST localhost:8081/comprovantes -H 'Content-Type: application/json' 
        "data_hora_transacao":"2022-04-10T20:03:57"}'
 ```
 
-- Na `v0`, responde `202` para qualquer coisa (ainda não valida nada).
-- No `gabarito`, responde `202` se estiver tudo certo e `400` se algum campo estiver errado (tente `"numero_conta":"002761"`).
+| Situação | Resposta do emissor |
+|---|---|
+| Tudo certo | `202`, e o comprovante fica `GRAVADO` |
+| Campo errado (tente `"numero_conta":"002761"`) | `400`, e ninguém chama o gravador |
+| Gravador desligado (`Ctrl+C` nele) | `503`, e o comprovante fica `INVALIDADO` (a SAGA desfez) |
 
-## Onde mexer na aula
+No PowerShell, o `curl` é outro comando. Use o **Git Bash** ou o Postman.
 
-Procure os comentários `// TODO (Aula 1)`. Os `TODO` das outras aulas ficam para depois.
+## As demos da Aula 2
 
-## O que mudou nesta branch (`gabarito`)
+**Gravador lento** ("demorar não quer dizer não"). Suba o gravador com um atraso maior que o tempo de espera do emissor (2 segundos):
 
-**Emissor**: ganhou um pacote `dominio` com o modelo de negócio:
+```bash
+mvn -pl comprovante-gravador spring-boot:run -Dspring-boot.run.arguments=--demo.atraso-ms=3000
+```
 
-| Classe | O que é | Regra que mora nela |
-|---|---|---|
-| `ContaBancaria` | Value Object | agência 4, conta 5, dígito 1 |
-| `Dinheiro` | Value Object | maior que zero, até 2 casas (e `10.0` igual a `10.00`) |
-| `ChavePix` | Value Object | o conteúdo da chave depende do tipo (CPF, CNPJ, e-mail…) |
-| `Comprovante` | Entidade (raiz do agregado) | tem id; só nasce completo, pelo `emitir(...)` |
+O emissor desiste, responde `503` e marca o comprovante como `INVALIDADO`... mas o gravador **salvou**. Para ver, abra o console do H2 em `http://localhost:8082/h2-console`:
 
-- O `EmissaoService` ficou curto: só transforma o "envelope" (`ComprovanteRequest`) no `Comprovante`.
-- Campo errado vira `400` (pela `ComprovanteInvalidoException`).
+- JDBC URL: `jdbc:h2:mem:gravador`
+- Usuário: `sa` (senha em branco)
+- `SELECT * FROM COMPROVANTE_ENTITY;`
 
-**Gravador**: o `GravadorService` já salva no banco, mas ninguém chama ele ainda. Quem vai chamar é a Aula 2.
+**Gravador idempotente.** Mande o mesmo comprovante direto para o gravador duas vezes. A primeira responde `201` (gravei agora), a segunda `200` (já tinha):
 
-**Consulta**: não muda, continua respondendo sempre `404` até a Aula 3.
+```bash
+curl -i -X POST localhost:8082/interno/comprovantes -H 'Content-Type: application/json' \
+  -d '{"identificador_comprovante":"11111111-1111-1111-1111-111111111111","dados":{"nome":"Giovanni",
+       "tipo_documento":"CPF","numero_documento":"50329291076","numero_agencia":"2022",
+       "numero_conta":"00276","digito_verificador_conta":"0","valor_transacao":23.99,
+       "tipo_chave_pix_destino":"CELULAR","chave_pix_destino":"11948755536",
+       "nome_cliente_destino":"Fernando","identificacao_pix":"churrasco",
+       "data_hora_transacao":"2022-04-10T20:03:57"}}'
+```
 
-**Testes** (`mvn test`), que também servem para mostrar na aula:
-- `DominioTest`: um VO é igual por valor, uma entidade é igual por id, e cada VO rejeita o que está errado.
-- `ComprovanteControllerTest`: o `POST` responde `202` quando está certo e `400` quando a conta tem 6 caracteres.
+## O que mudou nesta branch (`aula-02`)
 
-**Próximo passo sugerido para os alunos:** criar o VO `Documento` (tipo + número). É o que ainda sobrou dentro do `validarCamposRestantes()`.
+**Emissor**: virou o **orquestrador** de uma SAGA de dois passos.
+
+1. Cria o `Comprovante` e guarda como `ACEITO`.
+2. Chama o gravador.
+3. Deu certo → marca `GRAVADO` e responde `202`.
+4. Deu errado → **compensa**: marca `INVALIDADO` (com o motivo, sem apagar) e responde `503`.
+
+| Onde | O que entrou |
+|---|---|
+| `dominio/StatusComprovante` | `ACEITO`, `GRAVADO`, `INVALIDADO` |
+| `dominio/Comprovante` | `confirmarGravacao()` e `invalidar(motivo)`, a compensação. Invalidar duas vezes não muda nada. |
+| `persistencia/ComprovanteRepository` | Guarda os comprovantes do emissor (em memória, para a aula) |
+| `gravacao/client/GravadorClient` | A chamada HTTP para o gravador, com tempo máximo de espera (`gravador.timeout-ms`) |
+| `gravacao/GravacaoAdapter` | Esconde o HTTP do resto do código. Na aula de fila, só ele muda. |
+| `gravacao/GravacaoFalhouException` | Vira `503` |
+| `EmissaoService` | Os passos da SAGA, com o `try/catch` da compensação |
+
+**Gravador**: ganhou a "porta da frente", o `GravadorController` (`POST /interno/comprovantes`). Se o id já existe, não grava de novo e responde `200`. Também passou a ler o JSON em `snake_case`, igual ao emissor.
+
+**Consulta**: não muda.
+
+**Testes** (`mvn test`, 14 no total):
+- `EmissaoSagaTest`: o caminho feliz e a compensação, com o gravador de mentira (Mockito).
+- `ComprovanteControllerTest`: `202`, `400` e agora `503`.
+- `DominioTest`: os de antes, mais "invalidar duas vezes dá no mesmo" e "comprovante invalidado não pode ser confirmado".
+- `GravadorIdempotenciaTest`: mandar o mesmo comando duas vezes grava uma vez só.
+
+**Desafio para os alunos:** se o **cliente** reenviar o mesmo pedido (porque a resposta não chegou), hoje vira outro comprovante, com outro id. Faça o emissor aceitar um header `Idempotency-Key` e devolver a mesma resposta quando a chave se repetir.

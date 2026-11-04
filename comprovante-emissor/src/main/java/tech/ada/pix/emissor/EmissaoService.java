@@ -6,28 +6,65 @@ import tech.ada.pix.emissor.dominio.ChavePix;
 import tech.ada.pix.emissor.dominio.Comprovante;
 import tech.ada.pix.emissor.dominio.ContaBancaria;
 import tech.ada.pix.emissor.dominio.Dinheiro;
+import tech.ada.pix.emissor.gravacao.GravacaoAdapter;
+import tech.ada.pix.emissor.gravacao.GravacaoFalhouException;
+import tech.ada.pix.emissor.persistencia.ComprovanteRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
 /**
- * Serviço de APLICAÇÃO do bounded context EMISSÃO (Aula 1 — DDD).
+ * Serviço de APLICAÇÃO do bounded context EMISSÃO.
  *
- * Ele só coordena: transforma o envelope (ComprovanteRequest) no modelo de
- * domínio (Comprovante + Value Objects). As regras moram nos objetos de domínio.
- * A gravação ainda NÃO acontece aqui — será orquestrada na Aula 2 (SAGA) e
- * desacoplada por mensageria na Aula 4.
+ * Aula 1: transforma o envelope (ComprovanteRequest) no modelo de domínio.
+ * Aula 2: é o ORQUESTRADOR da SAGA "emitir → gravar".
+ *
+ *   Passo 1 (local)  : emitir o comprovante e guardar como ACEITO na base do emissor
+ *   Passo 2 (remoto) : pedir ao gravador para gravar
+ *   Deu certo        : marcar GRAVADO e responder 202
+ *   Deu errado       : COMPENSAR o passo 1 (invalidar) e responder 503
  */
 @Service
 public class EmissaoService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmissaoService.class);
+
+    private final ComprovanteRepository comprovantes;
+    private final GravacaoAdapter gravacao;
+
+    public EmissaoService(ComprovanteRepository comprovantes, GravacaoAdapter gravacao) {
+        this.comprovantes = comprovantes;
+        this.gravacao = gravacao;
+    }
+
     public ComprovanteAceito aceitar(ComprovanteRequest r) {
         validarCamposRestantes(r);
+
+        // Passo 1 — transação LOCAL, na base do emissor
         Comprovante comprovante = Comprovante.emitir(
                 r.nome(),
                 new ContaBancaria(r.numeroAgencia(), r.numeroConta(), r.digitoVerificadorConta()),
                 new Dinheiro(r.valorTransacao()),
                 new ChavePix(r.tipoChavePixDestino(), r.chavePixDestino()));
+        comprovantes.salvar(comprovante);                       // ACEITO
+
+        // Passo 2 — passo REMOTO, em outro serviço e outro banco
+        try {
+            gravacao.gravar(comprovante, r);
+            comprovante.confirmarGravacao();                    // GRAVADO
+            comprovantes.salvar(comprovante);
+        } catch (GravacaoFalhouException falha) {
+            // Compensação do passo 1: operação de negócio, não DELETE
+            comprovante.invalidar("gravação falhou: " + falha.getCause().getMessage());
+            comprovantes.salvar(comprovante);                   // INVALIDADO
+            log.warn("SAGA compensada: comprovante {} INVALIDADO ({})",
+                    comprovante.id(), comprovante.motivoInvalidacao());
+            throw falha;                                        // → 503, nunca 202
+        }
+
+        log.info("SAGA concluída: comprovante {} GRAVADO", comprovante.id());
         return new ComprovanteAceito(comprovante.id(), LocalDateTime.now());
     }
 
