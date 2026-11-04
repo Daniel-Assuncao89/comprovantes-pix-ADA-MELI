@@ -91,11 +91,15 @@ No PowerShell, o `curl` é outro comando. Use o **Git Bash** ou o Postman.
 mvn -pl comprovante-gravador spring-boot:run -Dspring-boot.run.arguments=--demo.atraso-ms=3000
 ```
 
-O emissor desiste, responde `503` e marca o comprovante como `INVALIDADO`... mas o gravador **salvou**. Para ver, abra o console do H2 em `http://localhost:8082/h2-console`:
+O emissor desiste, responde `503` e marca o comprovante como `INVALIDADO`... mas o gravador **salvou**. Para ver, abra os **dois consoles do H2** (cada serviço tem o seu banco):
 
-- JDBC URL: `jdbc:h2:mem:gravador`
-- Usuário: `sa` (senha em branco)
-- `SELECT * FROM COMPROVANTE_ENTITY;`
+| | Emissor | Gravador |
+|---|---|---|
+| Console | `http://localhost:8081/h2-console` | `http://localhost:8082/h2-console` |
+| JDBC URL | `jdbc:h2:mem:emissor` | `jdbc:h2:mem:gravador` |
+| O que aparece | o comprovante `INVALIDADO`, com o motivo | o mesmo id, **gravado** |
+
+Nos dois: usuário `sa`, senha em branco, `SELECT * FROM COMPROVANTE_ENTITY;`. Os bancos são em memória: reiniciar o serviço apaga tudo.
 
 **Gravador idempotente.** Mande o mesmo comprovante direto para o gravador duas vezes. A primeira responde `201` (gravei agora), a segunda `200` (já tinha):
 
@@ -121,19 +125,20 @@ curl -i -X POST localhost:8082/interno/comprovantes -H 'Content-Type: applicatio
 | Onde | O que entrou |
 |---|---|
 | `dominio/StatusComprovante` | `ACEITO`, `GRAVADO`, `INVALIDADO` |
-| `dominio/Comprovante` | `confirmarGravacao()` e `invalidar(motivo)`, a compensação. Invalidar duas vezes não muda nada. |
-| `persistencia/ComprovanteRepository` | Guarda os comprovantes do emissor (em memória, para a aula) |
+| `dominio/Comprovante` | `confirmarGravacao()` e `invalidar(motivo)`, a compensação. Invalidar duas vezes não muda nada. `reconstituir(...)` monta de volta o que veio do banco. |
+| `persistencia/ComprovanteEntity` | A linha da tabela (H2, `jdbc:h2:mem:emissor`). Separada do `Comprovante`, para o domínio continuar sem anotação de banco. |
+| `persistencia/ComprovanteRepository` | A base do emissor na língua do domínio. Cada `salvar()` é uma transação local, com o seu `COMMIT`. |
 | `gravacao/client/GravadorClient` | A chamada HTTP para o gravador, com tempo máximo de espera (`gravador.timeout-ms`) |
 | `gravacao/GravacaoAdapter` | Esconde o HTTP do resto do código. Na aula de fila, só ele muda. |
 | `gravacao/GravacaoFalhouException` | Vira `503` |
-| `EmissaoService` | Os passos da SAGA, com o `try/catch` da compensação |
+| `EmissaoService` | Os passos da SAGA, com o `try/catch` da compensação. **Sem `@Transactional`, de propósito**: o rollback apagaria o `INVALIDADO`. |
 
 **Gravador**: ganhou a "porta da frente", o `GravadorController` (`POST /interno/comprovantes`). Se o id já existe, não grava de novo e responde `200`. Também passou a ler o JSON em `snake_case`, igual ao emissor.
 
 **Consulta**: não muda.
 
 **Testes** (`mvn test`, 14 no total):
-- `EmissaoSagaTest`: o caminho feliz e a compensação, com o gravador de mentira (Mockito).
+- `EmissaoSagaTest`: o caminho feliz e a compensação, com a base de verdade do emissor e o gravador de mentira (Mockito). Confere o que ficou no banco.
 - `ComprovanteControllerTest`: `202`, `400` e agora `503`.
 - `DominioTest`: os de antes, mais "invalidar duas vezes dá no mesmo" e "comprovante invalidado não pode ser confirmado".
 - `GravadorIdempotenciaTest`: mandar o mesmo comando duas vezes grava uma vez só.
