@@ -31,7 +31,7 @@ public class GravadorController {
     @PostMapping
     public ResponseEntity<Void> gravar(@RequestBody GravarComprovanteCommand command) throws InterruptedException {
         boolean gravouAgora = gravador.gravar(command);
-        Thread.sleep(atrasoMs); // ⚠️ só para a demo do "não sei": grava, mas demora para responder
+        Thread.sleep(atrasoMs); // ⚠️ só para a demo
         return ResponseEntity.status(gravouAgora ? HttpStatus.CREATED : HttpStatus.OK).build();
     }
 }
