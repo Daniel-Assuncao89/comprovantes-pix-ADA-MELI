@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** O POST /comprovantes de ponta a ponta: 202 quando dá certo, 400 quando o campo está errado, 503 quando a gravação falha. */
 @WebMvcTest(ComprovanteController.class)
-@Import({EmissaoService.class, ComprovanteRepository.class})
+@Import(EmissaoService.class)
 class ComprovanteControllerTest {
 
     static final String COMPROVANTE_VALIDO = """
@@ -38,6 +38,9 @@ class ComprovanteControllerTest {
 
     @MockBean
     private GravacaoAdapter gravacao;   // o gravador de mentira: por padrão, "grava" sem erro
+
+    @MockBean
+    private ComprovanteRepository comprovantes;   // aqui o foco é o HTTP; o banco é testado no EmissaoSagaTest
 
     @Test
     void comprovanteValidoEhAceitoCom202() throws Exception {

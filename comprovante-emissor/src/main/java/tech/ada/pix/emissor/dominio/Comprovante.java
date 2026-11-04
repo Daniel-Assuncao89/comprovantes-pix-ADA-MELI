@@ -43,6 +43,18 @@ public class Comprovante {
         return new Comprovante(UUID.randomUUID(), nome, contaOrigem, valor, chaveDestino);
     }
 
+    /**
+     * Monta de volta um comprovante que JÁ EXISTIA (lido da base do emissor).
+     * Não é um comprovante novo: por isso não gera id e volta no status em que estava.
+     */
+    public static Comprovante reconstituir(UUID id, String nome, ContaBancaria contaOrigem, Dinheiro valor,
+                                           ChavePix chaveDestino, StatusComprovante status, String motivoInvalidacao) {
+        Comprovante comprovante = new Comprovante(id, nome, contaOrigem, valor, chaveDestino);
+        comprovante.status = status;
+        comprovante.motivoInvalidacao = motivoInvalidacao;
+        return comprovante;
+    }
+
     /** O passo "gravar" da SAGA deu certo. */
     public void confirmarGravacao() {
         if (status == StatusComprovante.INVALIDADO)

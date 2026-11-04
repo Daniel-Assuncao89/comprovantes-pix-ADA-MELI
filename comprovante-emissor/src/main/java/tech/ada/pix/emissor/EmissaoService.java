@@ -25,6 +25,12 @@ import java.time.LocalDateTime;
  *   Passo 2 (remoto) : pedir ao gravador para gravar
  *   Deu certo        : marcar GRAVADO e responder 202
  *   Deu errado       : COMPENSAR o passo 1 (invalidar) e responder 503
+ *
+ * ⚠️ Este método NÃO tem @Transactional, de propósito. Cada salvar(...) é uma transação
+ * local com o seu próprio COMMIT. Se o método inteiro fosse uma transação só:
+ *   - o banco ficaria "preso" esperando a resposta do gravador (chamada pela rede);
+ *   - quando a gravação falha, a exceção faria ROLLBACK de tudo, inclusive do
+ *     INVALIDADO: a compensação sumiria junto e não sobraria rastro nenhum.
  */
 @Service
 public class EmissaoService {
