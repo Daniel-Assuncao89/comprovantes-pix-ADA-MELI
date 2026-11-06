@@ -30,6 +30,11 @@ gravador:
   base-url: http://localhost:8082
   timeout-ms: 2000
 
+# Só para a demo da Aula 3: a "operadora de SMS" está fora do ar e o SMS falha.
+# Ex.: mvn -pl comprovante-emissor spring-boot:run -Dspring-boot.run.arguments=--demo.sms-fora=true
+demo:
+  sms-fora: false
+
 # ------------------------------------------------------------------------------
 # TODO (Aula 5) — a gravação deixa de ser REST e vira uma fila (RabbitMQ).
 # ------------------------------------------------------------------------------

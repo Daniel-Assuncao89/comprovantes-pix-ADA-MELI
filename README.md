@@ -1,4 +1,4 @@
-# Comprovantes PIX — Aulas 1 (DDD) e 2 (SAGA)
+# Comprovantes PIX — Aulas 1 (DDD), 2 (SAGA) e 3 (comunicação)
 
 Exemplo do projeto guiado. Uma API que **emite** e **consulta** comprovantes de PIX que já aconteceram.
 
@@ -10,18 +10,19 @@ Exemplo do projeto guiado. Uma API que **emite** e **consulta** comprovantes de 
 | `v0` | Só a **estrutura**: os módulos, as classes vazias e os `// TODO`. É o ponto de partida da Aula 1. |
 | `gabarito` | Fim da Aula 1: validação no emissor + o modelo de domínio com **entidade** e **Value Objects**. |
 | `aula-02` | Fim da Aula 2: o emissor chama o gravador numa **SAGA** e sabe desfazer quando a gravação falha. |
+| `aula-03` | Fim da Aula 3: no fim da SAGA, o emissor **avisa** com um evento, e SMS, antifraude e BI reagem cada um por conta própria. |
 
 Para trocar de uma para a outra:
 
 ```bash
-git checkout gabarito
 git checkout aula-02
+git checkout aula-03
 ```
 
 Para ver tudo o que muda entre duas branches:
 
 ```bash
-git diff gabarito aula-02
+git diff aula-02 aula-03
 ```
 
 ## Os módulos
@@ -113,7 +114,38 @@ curl -i -X POST localhost:8082/interno/comprovantes -H 'Content-Type: applicatio
        "data_hora_transacao":"2022-04-10T20:03:57"}}'
 ```
 
-## O que mudou nesta branch (`aula-02`)
+## A demo da Aula 3: o SMS fora do ar
+
+Suba o emissor com a "operadora de SMS" fora:
+
+```bash
+mvn -pl comprovante-emissor spring-boot:run -Dspring-boot.run.arguments=--demo.sms-fora=true
+```
+
+- **Como está na branch (com `@Async`):** o `POST` responde `202`. O erro do SMS aparece só no log, numa thread `task-N`. O PIX não cai junto.
+- **Tire o `@Async` da `NotificacaoSms` e suba de novo:** o `POST` responde `500` ("operadora de SMS fora do ar")... mas o comprovante ficou `GRAVADO` nos dois bancos. Evento **não** quer dizer assíncrono: são duas decisões diferentes.
+
+## O que mudou nesta branch (`aula-03`)
+
+**Emissor**: o núcleo do dinheiro continua **orquestrado** (a SAGA da Aula 2). A periferia passa a ser **coreografada**: quando a SAGA termina, o emissor publica um evento, e quem se interessa reage.
+
+| Onde | O que entrou |
+|---|---|
+| `dominio/ComprovanteGravado` | O **evento**: "o comprovante foi gravado". Leva o id e o valor. |
+| `EmissaoService` | No fim da SAGA, publica o `ComprovanteGravado` (`ApplicationEventPublisher`). Não sabe quem escuta. |
+| `reacoes/NotificacaoSms`, `reacoes/Antifraude`, `reacoes/PainelBi` | As reações (aqui, só um log). Cada uma com `@EventListener` + `@Async`: roda na sua thread, e a falha de uma não derruba o PIX. |
+| `EmissorApplication` | `@EnableAsync`, que liga o `@Async`. |
+| `application.yml` | `demo.sms-fora` (só para a demo). |
+
+⚠️ As reações moram no emissor **só por enquanto**: sem um broker, o evento não sai do processo. Se o emissor cair entre o `GRAVADO` e o SMS, o SMS se perde. Quem resolve isso são as aulas de fila e de Kafka.
+
+**Testes** (`mvn test`, 17 no total):
+- `EventoComprovanteGravadoTest`: a SAGA terminou → **um** evento, com o valor. A SAGA compensou → **nenhum** evento.
+- `SmsForaTest`: com o SMS fora, o PIX continua `GRAVADO`. Quebra se alguém tirar o `@Async`.
+
+**Exercício para os alunos (Aulas 2 e 3):** se o **cliente** reenviar o mesmo pedido, hoje vira outro PIX (e outro SMS). Faça o emissor aceitar um header `Idempotency-Key` e devolver a mesma resposta quando a chave se repetir.
+
+## O que mudou na branch `aula-02`
 
 **Emissor**: virou o **orquestrador** de uma SAGA de dois passos.
 
@@ -142,5 +174,3 @@ curl -i -X POST localhost:8082/interno/comprovantes -H 'Content-Type: applicatio
 - `ComprovanteControllerTest`: `202`, `400` e agora `503`.
 - `DominioTest`: os de antes, mais "invalidar duas vezes dá no mesmo" e "comprovante invalidado não pode ser confirmado".
 - `GravadorIdempotenciaTest`: mandar o mesmo comando duas vezes grava uma vez só.
-
-**Desafio para os alunos:** se o **cliente** reenviar o mesmo pedido (porque a resposta não chegou), hoje vira outro comprovante, com outro id. Faça o emissor aceitar um header `Idempotency-Key` e devolver a mesma resposta quando a chave se repetir.
