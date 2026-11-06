@@ -15,45 +15,55 @@ Ninguém precisa saber muito Java: todo código deste exercício está pronto pa
 
 ## Antes de começar
 
-**1. Criar a branch da dupla e instalar** (uma vez só):
+**0. O que precisa estar instalado:** o Git e o Docker Desktop, **aberto**. O [README](README.md), na seção "Comece aqui", explica. Quem já tem Java 21 e Maven pode rodar sem Docker: o README tem a troca dos comandos.
+
+**1. Criar a branch da dupla** (uma vez só):
 
 ```bash
-git checkout aula-03
-git checkout -b exercicio-<nome-da-dupla>
-mvn install -DskipTests
+git switch aula-03
+git switch -c exercicio-<nome-da-dupla>
 ```
 
-**2. Abrir três terminais Git Bash** (no PowerShell, o `curl` é outro comando):
+**2. Abrir dois terminais**, os dois na pasta do projeto. No Windows, use o **Git Bash**.
 
-| Terminal | Para quê | Comando |
-|---|---|---|
-| 1 | o gravador | `mvn -pl comprovante-gravador spring-boot:run` |
-| 2 | o emissor (é aqui que vocês vão olhar o log) | `mvn -pl comprovante-emissor spring-boot:run` |
-| 3 | mandar os PIX | os comandos abaixo |
+| Terminal | Para quê |
+|---|---|
+| 1 | o **emissor**. É aqui que vocês vão olhar o log |
+| 2 | **todo o resto**: o gravador, os PIX e o `git` |
 
-Suba o gravador primeiro e espere aparecer `Started GravadorApplication`. Depois, o emissor.
-
-**3. No terminal 3, guardar o PIX numa variável** (cole tudo de uma vez):
+Suba o gravador primeiro, no terminal 2:
 
 ```bash
-PIX='{"nome":"Giovanni","tipo_documento":"CPF","numero_documento":"50329291076",
-      "numero_agencia":"2022","numero_conta":"00276","digito_verificador_conta":"0",
-      "valor_transacao":23.99,"tipo_chave_pix_destino":"CELULAR","chave_pix_destino":"11948755536",
-      "nome_cliente_destino":"Fernando","identificacao_pix":"churrasco",
-      "data_hora_transacao":"2022-04-10T20:03:57"}'
+docker compose up -d --build gravador
 ```
 
-Para mandar um PIX (vocês vão usar muito):
+Depois, o emissor, no terminal 1. Espere aparecer `Started EmissorApplication`:
 
 ```bash
-curl -i -X POST localhost:8081/comprovantes -H 'Content-Type: application/json' -d "$PIX"
+docker compose up --build emissor
 ```
 
-A primeira linha da resposta é o **status**: `HTTP/1.1 202`, `HTTP/1.1 500`... O `identificador_comprovante` é o id do comprovante.
+A primeira vez demora uns minutos: o Docker baixa o Java, o Maven e as bibliotecas. Depois, fica rápido.
 
-**4. Reiniciar o emissor depois de mudar o código:** `Ctrl+C` no terminal 2 e o mesmo comando de novo. Ele compila o código novo ao subir.
+**3. Mandar um PIX** (vocês vão usar muito), no terminal 2:
 
-**5. Olhar os bancos.** Cada serviço tem o seu banco, e cada banco tem um console no navegador:
+```bash
+curl -i -X POST localhost:8081/comprovantes -H "Content-Type: application/json" -d "@pix.json"
+```
+
+O PIX está no arquivo `pix.json`, na pasta do projeto. A primeira linha da resposta é o **status**: `HTTP/1.1 202`, `HTTP/1.1 500`... O `identificador_comprovante` é o id do comprovante. (No PowerShell, troque `curl` por `curl.exe`.)
+
+**4. Reiniciar o emissor depois de mudar o código:** `Ctrl+C` no terminal 1 e o mesmo comando de novo, `docker compose up --build emissor`. O `--build` compila o código novo: leva uns 20 segundos.
+
+**5. Ligar e desligar os serviços**, no terminal 2:
+
+| Para... | Comando |
+|---|---|
+| desligar o gravador | `docker compose stop gravador` |
+| ligar o gravador de novo | `docker compose start gravador` |
+| derrubar o emissor de repente, como uma queda | `docker compose kill emissor` |
+
+**6. Olhar os bancos.** Cada serviço tem o seu banco, e cada banco tem um console no navegador:
 
 | | Emissor | Gravador |
 |---|---|---|
@@ -62,13 +72,15 @@ A primeira linha da resposta é o **status**: `HTTP/1.1 202`, `HTTP/1.1 500`... 
 
 Usuário `sa`, senha em branco. **Confira a JDBC URL antes de clicar em Connect:** o console às vezes lembra a do outro serviço. Os bancos ficam na memória: **reiniciar um serviço apaga o banco dele**.
 
+No fim da aula, `docker compose down` desliga tudo.
+
 ---
 
 ## Passo 1: o fluxo de hoje (sem código, ~10 min)
 
-**Faça:** suba o gravador e o emissor e mande um PIX. Olhe o log do emissor (terminal 2). Mande mais um PIX e olhe de novo.
+**Faça:** suba o gravador e o emissor e mande um PIX. Olhe o log do emissor (terminal 1). Mande mais um PIX e olhe de novo.
 
-**Dica:** procure as linhas com o id do comprovante. O que aparece entre colchetes, como `[nio-8081-exec-1]` ou `[task-1]`, é o nome da **thread**: quem está executando aquela linha. A thread `nio-8081-exec-N` é a que atende o `curl`.
+**Dica:** procure as linhas com o id do comprovante. O que aparece entre colchetes, como `[nio-8081-exec-1]` ou `[task-1]`, é o nome da **thread**: quem está executando aquela linha. A thread `nio-8081-exec-N` é a que atende o `curl`. (O `emissor-1 |` no começo de cada linha é o Docker dizendo de qual container ela veio.)
 
 **1.1** O evento `ComprovanteGravado` tem um **producer** e alguns **consumers**. Quem é o producer? Quem são os consumers?
 
@@ -187,13 +199,13 @@ Faça um commit (com o `Cashback` já desfeito).
 
 ## Passo 4: o gravador fora do ar (sem código, ~8 min)
 
-**Faça:** pare o gravador (`Ctrl+C` no terminal 1) e mande um PIX. Olhe o status, o log do emissor e o banco do emissor:
+**Faça:** pare o gravador (`docker compose stop gravador`) e mande um PIX. O `curl` demora uns segundos para responder. Olhe o status, o log do emissor e o banco do emissor:
 
 ```sql
 SELECT ID, STATUS, MOTIVO_INVALIDACAO FROM COMPROVANTE_ENTITY;
 ```
 
-No fim, suba o gravador de novo.
+No fim, suba o gravador de novo (`docker compose start gravador`). Ele leva uns 15 segundos para ficar pronto.
 
 **4.1** Qual status o `curl` recebeu? Como ficou o comprovante no banco?
 
@@ -230,8 +242,12 @@ No fim, suba o gravador de novo.
 Reinicie o emissor. Depois:
 
 - **(a)** Mande um PIX e espere 10 segundos. Olhe o log.
-- **(b)** Mande outro PIX e, **antes de passar 10 segundos**, pare o emissor (`Ctrl+C` no terminal 2). Anote o id desse comprovante: ele está na resposta do `curl`.
-- **(c)** Suba o emissor de novo e espere um pouco. No console do H2 do **gravador**, rode `SELECT * FROM COMPROVANTE_ENTITY;`.
+- **(b)** Mande outro PIX e, **antes de passar 10 segundos**, derrube o emissor. Para dar tempo, mande os dois comandos juntos, numa linha só:
+  ```bash
+  curl -i -X POST localhost:8081/comprovantes -H "Content-Type: application/json" -d "@pix.json"; docker compose kill emissor
+  ```
+  Anote o id desse comprovante: ele está na resposta do `curl`.
+- **(c)** Suba o emissor de novo (no terminal 1, `docker compose up --build emissor`) e espere uns 15 segundos. No console do H2 do **gravador**, rode `SELECT * FROM COMPROVANTE_ENTITY;`.
 - **(d)** Desfaça: volte o método como era no passo 2 (sem o `Thread.sleep` e sem o `throws InterruptedException`).
 
 **5.1** Em (a), o `curl` demorou 10 segundos para responder? Por quê?
@@ -260,7 +276,7 @@ Faça um commit (com o `Cashback` já desfeito).
 
 ## Passo 6: estado × fatos (SQL e papel, ~10 min)
 
-**Faça:** com o gravador e o emissor de pé, mande um PIX (o **PIX 1**). Pare o gravador, mande outro (o **PIX 2**) e suba o gravador de novo. No console do H2 do **emissor**, rode:
+**Faça:** com o gravador e o emissor de pé, mande um PIX (o **PIX 1**). Pare o gravador (`docker compose stop gravador`), mande outro (o **PIX 2**) e suba o gravador de novo (`docker compose start gravador`). No console do H2 do **emissor**, rode:
 
 ```sql
 SELECT * FROM COMPROVANTE_ENTITY;
@@ -288,7 +304,7 @@ Faça um commit.
 
 ## Desafio extra (para quem já sabe Java)
 
-Se o **cliente** reenviar o mesmo pedido (o app travou e ele apertou de novo), hoje vira outro PIX, e outro cashback. Faça o emissor aceitar um header `Idempotency-Key` e devolver a **mesma resposta** quando a chave se repetir, sem fazer um PIX novo e sem publicar um segundo evento. Prove com um teste seu.
+Se o **cliente** reenviar o mesmo pedido (o app travou e ele apertou de novo), hoje vira outro PIX, e outro cashback. Faça o emissor aceitar um header `Idempotency-Key` e devolver a **mesma resposta** quando a chave se repetir, sem fazer um PIX novo e sem publicar um segundo evento. Prove com um teste seu. Para rodar os testes: `docker compose run --rm testes`.
 
 ---
 
@@ -296,10 +312,14 @@ Se o **cliente** reenviar o mesmo pedido (o app travou e ele apertou de novo), h
 
 | O que aparece | O que fazer |
 |---|---|
-| `Port 8081 was already in use` (ou 8082) | Sobrou um Java rodando: às vezes o `Ctrl+C` no Git Bash não fecha tudo. Rode `netstat -ano \| grep :8081`. O último número da linha é o PID. Depois, `taskkill //PID <o número> //F`. |
+| `Cannot connect to the Docker daemon`, `error during connect` ou `docker: command not found` | O Docker Desktop não está aberto. Abra e espere ele dizer que está rodando (*Engine running*). |
+| `port is already allocated` (8081 ou 8082) | Outro programa está usando a porta: talvez um emissor rodando fora do Docker. Feche esse programa. O `docker compose ps` mostra o que está rodando no Docker. |
+| `Empty reply from server` ou `Connection refused` | O serviço ainda está subindo. Espere o `Started ...Application` no log e mande de novo. |
+| `503` logo depois de ligar o gravador de novo | O gravador leva uns 15 segundos para ficar pronto. Espere e mande de novo. |
 | No console do H2: `Table "COMPROVANTE_ENTITY" not found` | A JDBC URL está errada. Emissor: `jdbc:h2:mem:emissor`. Gravador: `jdbc:h2:mem:gravador`. |
-| `unreachable statement` ao subir o emissor (passo 3) | Faltou o `if (true)` antes do `throw`. |
+| `unreachable statement` ao subir o emissor (passo 3) | Faltou o `if (true)` antes do `throw`. O erro aparece no meio do build, numa linha com `[ERROR]`. |
 | `unreported exception java.lang.InterruptedException` (passo 5) | Faltou o `throws InterruptedException` na linha do método. |
-| Mudei o código e nada mudou | Reiniciaram o emissor? |
-| `curl` com erro estranho | Use o Git Bash, e não o PowerShell. Confira se a variável `PIX` existe nesse terminal (`echo "$PIX"`). |
-| No passo 5, apareceu um `InterruptedException` no log quando o emissor parou | Normal: o emissor interrompeu o cashback que estava esperando. O resultado é o mesmo: o cashback não aconteceu. |
+| Mudei o código e nada mudou | Reiniciaram o emissor **com o `--build`**? |
+| `curl` com erro estranho | No PowerShell, use `curl.exe`. E rode o comando na pasta do projeto: o `@pix.json` é o arquivo de lá. |
+| `the input device is not a TTY` | Rode o mesmo comando com `-T` depois do `run`: `docker compose run --rm -T testes`. |
+| Sem Docker, no passo 5, apareceu um `InterruptedException` no log quando o emissor parou | Normal: o emissor interrompeu o cashback que estava esperando. O resultado é o mesmo: o cashback não aconteceu. |

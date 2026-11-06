@@ -1,0 +1,51 @@
+# Sobe o gravador (porta 8082) e o emissor (porta 8081), cada um no seu container.
+#
+#   docker compose up -d --build gravador     # o gravador, em segundo plano
+#   docker compose up --build emissor         # o emissor, mostrando o log neste terminal
+#   docker compose run --rm testes            # roda os testes (mvn test)
+#
+# O README explica o resto.
+name: comprovantes-pix
+
+services:
+
+  gravador:
+    build:
+      context: .
+      args:
+        MODULO: gravador
+    ports:
+      - "8082:8082"
+    environment:
+      # Deixa abrir o console do H2 de fora do container (http://localhost:8082/h2-console).
+      SPRING_H2_CONSOLE_SETTINGS_WEBALLOWOTHERS: "true"
+      # Só para a demo da Aula 2 (gravador lento). Ex.: DEMO_ATRASO_MS=3000 docker compose up -d gravador
+      DEMO_ATRASOMS: ${DEMO_ATRASO_MS:-0}
+
+  emissor:
+    build:
+      context: .
+      args:
+        MODULO: emissor
+    ports:
+      - "8081:8081"
+    environment:
+      # Dentro do Docker, o emissor acha o gravador pelo nome do serviço, e não por "localhost".
+      GRAVADOR_BASE_URL: http://gravador:8082
+      SPRING_H2_CONSOLE_SETTINGS_WEBALLOWOTHERS: "true"
+      # Só para a demo da Aula 3 (SMS fora do ar). Ex.: DEMO_SMS_FORA=true docker compose up --build emissor
+      DEMO_SMSFORA: ${DEMO_SMS_FORA:-false}
+
+  # Roda os testes de todos os módulos, sem precisar de Java nem Maven na máquina.
+  # Só sobe quando alguém pede: docker compose run --rm testes
+  testes:
+    image: maven:3.9.9-eclipse-temurin-21
+    profiles: ["testes"]
+    working_dir: /projeto
+    volumes:
+      - ./:/projeto
+      - maven-cache:/root/.m2
+    command: mvn -B clean test   # "clean": começa do zero, sem sobras de outra branch
+
+volumes:
+  maven-cache:

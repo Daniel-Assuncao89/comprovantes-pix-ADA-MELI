@@ -1,0 +1,10 @@
+# O que NÃO entra na imagem. Assim, escrever as respostas do exercício (os .md) não obriga
+# a recompilar nada.
+.git
+**/target
+.idea
+.vscode
+*.iml
+**/*.md
+docs
+pix.json
