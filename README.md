@@ -211,7 +211,7 @@ No PowerShell, a variável é assim: `$env:DEMO_SMS_FORA="true"; docker compose 
 
 ## O exercício da Aula 3: o cashback
 
-Está em [`EXERCICIO-AULA-03.md`](EXERCICIO-AULA-03.md). O negócio pediu cashback em todo PIX, e a dupla coloca o cashback no emissor em 6 passos curtos. Em cada passo, roda o fluxo inteiro, olha o log, a resposta ou o banco, e responde perguntas sobre as palavras da aula. O Java é pouco e vem pronto para copiar.
+Está em [`EXERCICIO-AULA-03.md`](EXERCICIO-AULA-03.md). O negócio pediu cashback em todo PIX, e cada pessoa coloca o cashback no emissor em 6 passos curtos. Em cada passo, roda o fluxo inteiro, olha o log, a resposta ou o banco, e responde perguntas sobre as palavras da aula. O Java é pouco e vem pronto para copiar.
 
 O desafio da `Idempotency-Key` (que ficou da Aula 2) é o desafio extra do exercício.
 

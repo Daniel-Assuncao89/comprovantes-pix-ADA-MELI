@@ -2,33 +2,33 @@
 
 O negócio pediu: **"todo PIX concluído dá 1% de cashback para o cliente"**.
 
-Vocês vão colocar o cashback no nosso emissor. No caminho, vão ver acontecer, na máquina de vocês, as palavras da aula: **producer, consumer, evento, comando, síncrono, assíncrono, fila, tópico, broker, mensagem, event stream e event sourcing**.
+Você vai colocar o cashback no nosso emissor. No caminho, vai ver acontecer, na sua máquina, as palavras da aula: **producer, consumer, evento, comando, síncrono, assíncrono, fila, tópico, broker, mensagem, event stream e event sourcing**.
 
 Ninguém precisa saber muito Java: todo código deste exercício está pronto para copiar. O trabalho é **rodar, olhar e explicar**.
 
 ## Como trabalhar
 
-- Em **dupla**.
+- **Individual**: cada pessoa faz o seu, na sua máquina.
 - Cada passo tem quatro partes: **fazer**, **rodar**, **olhar** (o log, a resposta do `curl` ou o banco) e **responder**.
 - As respostas vão **neste arquivo**, embaixo de cada pergunta, no lugar do *✍️ escreva aqui*. Com as suas palavras: não precisa ser bonito, precisa estar certo.
-- No fim de cada passo, façam um **commit**. A correção abre a próxima aula: tragam a branch de vocês.
+- No fim de cada passo, faça um **commit**. A correção abre a próxima aula: traga a sua branch.
 
 ## Antes de começar
 
 **0. O que precisa estar instalado:** o Git e o Docker Desktop, **aberto**. O [README](README.md), na seção "Comece aqui", explica. Quem já tem Java 21 e Maven pode rodar sem Docker: o README tem a troca dos comandos.
 
-**1. Criar a branch da dupla** (uma vez só):
+**1. Criar a sua branch** (uma vez só):
 
 ```bash
 git switch aula-03
-git switch -c exercicio-<nome-da-dupla>
+git switch -c exercicio-<seu-nome>
 ```
 
 **2. Abrir dois terminais**, os dois na pasta do projeto. No Windows, use o **Git Bash**.
 
 | Terminal | Para quê |
 |---|---|
-| 1 | o **emissor**. É aqui que vocês vão olhar o log |
+| 1 | o **emissor**. É aqui que você vai olhar o log |
 | 2 | **todo o resto**: o gravador, os PIX e o `git` |
 
 Suba o gravador primeiro, no terminal 2:
@@ -45,7 +45,7 @@ docker compose up --build emissor
 
 A primeira vez demora uns minutos: o Docker baixa o Java, o Maven e as bibliotecas. Depois, fica rápido.
 
-**3. Mandar um PIX** (vocês vão usar muito), no terminal 2:
+**3. Mandar um PIX** (você vai usar muito), no terminal 2:
 
 ```bash
 curl -i -X POST localhost:8081/comprovantes -H "Content-Type: application/json" -d "@pix.json"
@@ -94,7 +94,7 @@ No fim da aula, `docker compose down` desliga tudo.
 
 > ✍️ *escreva aqui*
 
-**1.4** O emissor também chama o gravador. Essa chamada é **síncrona** ou **assíncrona**? Como vocês sabem?
+**1.4** O emissor também chama o gravador. Essa chamada é **síncrona** ou **assíncrona**? Como você sabe?
 
 > ✍️ *escreva aqui*
 
@@ -145,7 +145,7 @@ Reinicie o emissor, mande um PIX e olhe o log. Depois, rode `git status`.
 
 > ✍️ *escreva aqui*
 
-**2.2** Quais arquivos o `git status` mostra? Vocês precisaram mexer no `EmissaoService`? Por quê?
+**2.2** Quais arquivos o `git status` mostra? Você precisou mexer no `EmissaoService`? Por quê?
 
 > ✍️ *escreva aqui*
 
@@ -254,7 +254,7 @@ Reinicie o emissor. Depois:
 
 > ✍️ *escreva aqui*
 
-**5.2** Em (b), o PIX foi feito? Como vocês sabem? (Por que olhar o banco do gravador, e não o do emissor?)
+**5.2** Em (b), o PIX foi feito? Como você sabe? (Por que olhar o banco do gravador, e não o do emissor?)
 
 > ✍️ *escreva aqui*
 
