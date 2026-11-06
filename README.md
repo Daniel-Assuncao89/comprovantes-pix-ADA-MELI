@@ -143,7 +143,11 @@ mvn -pl comprovante-emissor spring-boot:run -Dspring-boot.run.arguments=--demo.s
 - `EventoComprovanteGravadoTest`: a SAGA terminou → **um** evento, com o valor. A SAGA compensou → **nenhum** evento.
 - `SmsForaTest`: com o SMS fora, o PIX continua `GRAVADO`. Quebra se alguém tirar o `@Async`.
 
-**Exercício para os alunos (Aulas 2 e 3):** se o **cliente** reenviar o mesmo pedido, hoje vira outro PIX (e outro SMS). Faça o emissor aceitar um header `Idempotency-Key` e devolver a mesma resposta quando a chave se repetir.
+## O exercício da Aula 3: o cashback
+
+Está em [`EXERCICIO-AULA-03.md`](EXERCICIO-AULA-03.md). O negócio pediu cashback em todo PIX, e a dupla coloca o cashback no emissor em 6 passos curtos. Em cada passo, roda o fluxo inteiro, olha o log, a resposta ou o banco, e responde perguntas sobre as palavras da aula. O Java é pouco e vem pronto para copiar.
+
+O desafio da `Idempotency-Key` (que ficou da Aula 2) é o desafio extra do exercício.
 
 ## O que mudou na branch `aula-02`
 

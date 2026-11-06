@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 /**
  * Reação ao ComprovanteGravado (Aula 3): conta o PIX no painel de BI.
  *
- * É a reação que a turma cria AO VIVO, para ver a regra do evento na prática:
- * entrou um interessado novo e o EmissaoService não mudou nenhuma linha.
+ * No exercício da Aula 3 (EXERCICIO-AULA-03.md), ela é o modelo do Cashback: entra um
+ * interessado novo, e o EmissaoService não muda nenhuma linha.
  */
 @Component
 public class PainelBi {
