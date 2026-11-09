@@ -84,23 +84,23 @@ No fim da aula, `docker compose down` desliga tudo.
 
 **1.1** O evento `ComprovanteGravado` tem um **producer** e alguns **consumers**. Quem é o producer? Quem são os consumers?
 
-> ✍️ *escreva aqui*
+> O producer é o `EmissaoService`: depois de gravar o comprovante, ele publica `ComprovanteGravado`. Os consumers são as reações que escutam esse evento: `NotificacaoSms`, `Antifraude` e `PainelBi`.
 
 **1.2** A linha da SAGA ("SAGA concluída") roda na thread `nio-8081-exec-N`. Em qual thread rodam as reações? O que isso quer dizer para o cliente que mandou o PIX?
 
-> ✍️ *escreva aqui*
+> As reações rodam em threads `task-N`, diferentes da `nio-8081-exec-N` que atende o `curl`. Como são assíncronas, o cliente espera a conclusão da SAGA, mas não precisa esperar as reações; uma falha nelas não altera a resposta do PIX.
 
 **1.3** Compare os dois PIX: as reações aparecem sempre na mesma ordem? Por quê?
 
-> ✍️ *escreva aqui*
+> Não. Como cada reação é executada de forma assíncrona em uma thread, elas podem concorrer e terminar em ordens diferentes. Por isso, a ordem das linhas no log pode variar entre os PIX.
 
 **1.4** O emissor também chama o gravador. Essa chamada é **síncrona** ou **assíncrona**? Como você sabe?
 
-> ✍️ *escreva aqui*
+> É síncrona. O emissor faz uma chamada HTTP ao gravador e espera a resposta antes de concluir a SAGA, publicar `ComprovanteGravado` e responder ao cliente.
 
 **1.5** O `ComprovanteGravado` é um **comando** ou um **evento**? Por quê?
 
-> ✍️ *escreva aqui*
+> É um evento: comunica um fato que já aconteceu — o comprovante foi gravado. Não é uma instrução para alguém gravá-lo; é publicado depois que a gravação foi concluída.
 
 ---
 
