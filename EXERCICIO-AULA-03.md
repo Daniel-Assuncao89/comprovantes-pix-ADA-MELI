@@ -143,15 +143,15 @@ Reinicie o emissor, mande um PIX e olhe o log. Depois, rode `git status`.
 
 **2.1** Quantas reações apareceram no log agora?
 
-> ✍️ *escreva aqui*
+> Quatro: SMS, antifraude, BI e cashback.
 
 **2.2** Quais arquivos o `git status` mostra? Você precisou mexer no `EmissaoService`? Por quê?
 
-> ✍️ *escreva aqui*
+> O `git status` mostra o novo `Cashback.java` e o `EXERCICIO-AULA-03.md` modificado com estas respostas. Não precisei mexer no `EmissaoService`: ele já publica o evento `ComprovanteGravado`, e o cashback é outra reação inscrita para recebê-lo.
 
 **2.3** O mesmo evento chegou para as quatro reações. Isso se parece mais com uma **fila** ou com um **tópico**? Por quê?
 
-> ✍️ *escreva aqui*
+> Parece mais com um tópico: cada reação inscrita recebe uma cópia do mesmo evento. Em uma fila de consumidores concorrentes, em geral uma mensagem é entregue a apenas um consumidor.
 
 Faça um commit.
 
