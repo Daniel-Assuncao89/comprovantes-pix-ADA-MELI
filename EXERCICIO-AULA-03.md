@@ -179,19 +179,19 @@ SELECT ID, STATUS FROM COMPROVANTE_ENTITY;
 
 **3.1** Com `@Async`, qual status o `curl` recebeu? E sem `@Async`?
 
-> ✍️ *escreva aqui*
+> Com `@Async`, recebeu `202`: a exceção aconteceu na thread da reação e não mudou a resposta do emissor. Sem `@Async`, recebeu `500`, porque a exceção foi lançada durante o processamento da requisição.
 
 **3.2** Sem `@Async`, o PIX foi feito? Olhe o banco. O que o cliente vai pensar? E o que ele provavelmente vai fazer?
 
-> ✍️ *escreva aqui*
+> Sim. No banco do emissor o comprovante está `GRAVADO` (e o gravador também recebeu o PIX), pois a falha do cashback acontece depois de a SAGA concluir. Como recebeu `500`, o cliente pode pensar que o PIX falhou e tentar fazê-lo de novo, arriscando uma operação duplicada.
 
 **3.3** Sem `@Async`, quais reações apareceram no log para esse PIX? O que aconteceu com as outras?
 
-> ✍️ *escreva aqui*
+> Apareceram SMS, antifraude e BI. O cashback lançou a exceção antes de registrar seu log de sucesso. Neste teste, as outras três reações já tinham sido despachadas e executaram; a exceção síncrona não as desfez.
 
 **3.4** Então: evento é sempre assíncrono?
 
-> ✍️ *escreva aqui*
+> Não. Publicar um evento não o torna assíncrono por si só. Neste exemplo, o Spring chama os listeners sincronamente por padrão; `@Async` é o que faz cada reação anotada rodar em outra thread.
 
 Faça um commit (com o `Cashback` já desfeito).
 
